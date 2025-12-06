@@ -127,6 +127,38 @@ Once the application is running, visit http://localhost:8080/swagger-ui for inte
 - `PUT /api/users/{id}` - Update user (protected)
 - `DELETE /api/users/{id}` - Delete user (protected)
 
+#### Case Management
+- `GET /api/cases` - List all cases with optional filtering
+  - Query params: `page`, `per_page`, `status`, `search`
+- `POST /api/cases` - Create a new case
+- `GET /api/cases/{id}` - Get case details with parties
+- `PUT /api/cases/{id}` - Update case information
+- `DELETE /api/cases/{id}` - Delete (soft delete) a case
+- `GET /api/cases/{id}/parties` - Get all parties for a case
+
+#### Dashboard & Analytics
+- `GET /api/dashboard/stats` - Get dashboard statistics (active cases, pending motions, billable hours, etc.)
+- `GET /api/dashboard/chart-data` - Get case status distribution for charts
+- `GET /api/dashboard/alerts` - Get recent high-priority alerts
+
+#### Workflow & Tasks
+- `GET /api/tasks` - List workflow tasks with optional filtering
+  - Query params: `case_id`, `status`, `assignee_id`
+- `GET /api/tasks/{id}` - Get specific task details
+
+### Database Schema
+
+The backend includes comprehensive database schema for:
+- **Case Management**: Cases, parties, case associations
+- **Documents**: Legal documents with version control
+- **Litigation**: Motions, docket entries, evidence items, trial exhibits
+- **Discovery**: Discovery requests, depositions, ESI sources, production sets
+- **Billing**: Clients, time entries, invoices
+- **Compliance**: Risks, conflict checks, audit logs
+- **Organization**: Organizations, groups, legal entities, entity relationships
+- **Communication**: Communications, clauses, notifications
+- **Workflow**: Tasks, projects, workflow templates
+
 ## 🔐 Authentication
 
 The API uses JWT (JSON Web Tokens) for authentication.

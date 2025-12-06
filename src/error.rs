@@ -5,6 +5,7 @@ use axum::{
 };
 use serde_json::json;
 use thiserror::Error;
+use validator::ValidationErrors;
 
 /// Custom error types for the application
 #[derive(Error, Debug)]
@@ -20,6 +21,9 @@ pub enum AppError {
 
     #[error("Validation error: {0}")]
     Validation(String),
+
+    #[error("Validation errors: {0}")]
+    ValidationErrors(#[from] ValidationErrors),
 
     #[error("Not found: {0}")]
     NotFound(String),
@@ -59,6 +63,10 @@ impl IntoResponse for AppError {
             AppError::Validation(ref msg) => {
                 tracing::warn!("Validation error: {}", msg);
                 (StatusCode::BAD_REQUEST, msg.clone())
+            }
+            AppError::ValidationErrors(ref e) => {
+                tracing::warn!("Validation errors: {:?}", e);
+                (StatusCode::BAD_REQUEST, format!("Validation errors: {}", e))
             }
             AppError::NotFound(ref msg) => {
                 tracing::warn!("Not found: {}", msg);

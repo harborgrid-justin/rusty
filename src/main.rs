@@ -16,7 +16,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use rusty_saas::{
     api::{
         health::{health_check, liveness_check, readiness_check},
-        users::{handlers, UserService},
+        users::{handlers as user_handlers, UserService},
+        cases::{handlers as case_handlers, CaseService},
     },
     auth::AuthService,
     config::Config,
@@ -24,7 +25,7 @@ use rusty_saas::{
     middleware::{auth_middleware, metrics_middleware, request_id_middleware},
     models::{
         CreateUserRequest, HealthResponse, LoginRequest, LoginResponse, UpdateUserRequest,
-        UserResponse,
+        UserResponse, Case, CaseResponse, CreateCaseRequest, UpdateCaseRequest, Party,
     },
 };
 
@@ -32,13 +33,19 @@ use rusty_saas::{
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        handlers::create_user,
-        handlers::login,
-        handlers::get_current_user,
-        handlers::get_user,
-        handlers::update_user,
-        handlers::delete_user,
-        handlers::list_users,
+        user_handlers::create_user,
+        user_handlers::login,
+        user_handlers::get_current_user,
+        user_handlers::get_user,
+        user_handlers::update_user,
+        user_handlers::delete_user,
+        user_handlers::list_users,
+        case_handlers::list_cases,
+        case_handlers::get_case,
+        case_handlers::create_case,
+        case_handlers::update_case,
+        case_handlers::delete_case,
+        case_handlers::get_case_parties,
     ),
     components(
         schemas(
@@ -48,6 +55,11 @@ use rusty_saas::{
             UpdateUserRequest,
             LoginRequest,
             LoginResponse,
+            Case,
+            CaseResponse,
+            CreateCaseRequest,
+            UpdateCaseRequest,
+            Party,
         )
     ),
     modifiers(&SecurityAddon),
@@ -55,6 +67,7 @@ use rusty_saas::{
         (name = "health", description = "Health check endpoints"),
         (name = "auth", description = "Authentication endpoints"),
         (name = "users", description = "User management endpoints"),
+        (name = "cases", description = "Case management endpoints"),
     )
 )]
 struct ApiDoc;
@@ -115,6 +128,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize services
     let auth_service = Arc::new(AuthService::new(Arc::new(config.jwt.clone())));
     let user_service = Arc::new(UserService::new(db.clone(), auth_service.clone()));
+    let case_service = Arc::new(CaseService::new(db.pool().clone()));
 
     // Configure CORS based on environment
     let cors = if config.server.environment == "production" {
@@ -152,27 +166,42 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
         .route("/live", get(liveness_check))
-        .route("/api/users", post(handlers::create_user))
-        .route("/api/auth/login", post(handlers::login))
+        .route("/api/users", post(user_handlers::create_user))
+        .route("/api/auth/login", post(user_handlers::login))
         .with_state(user_service.clone());
 
-    // Build protected routes (auth required)
-    let protected_routes = Router::new()
-        .route("/api/users/me", get(handlers::get_current_user))
-        .route("/api/users", get(handlers::list_users))
-        .route("/api/users/:id", get(handlers::get_user))
-        .route("/api/users/:id", put(handlers::update_user))
-        .route("/api/users/:id", delete(handlers::delete_user))
+    // Build user protected routes
+    let user_protected_routes = Router::new()
+        .route("/api/users/me", get(user_handlers::get_current_user))
+        .route("/api/users", get(user_handlers::list_users))
+        .route("/api/users/:id", get(user_handlers::get_user))
+        .route("/api/users/:id", put(user_handlers::update_user))
+        .route("/api/users/:id", delete(user_handlers::delete_user))
+        .with_state(user_service)
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),
             auth_middleware,
-        ))
-        .with_state(user_service);
+        ));
+
+    // Build case protected routes
+    let case_protected_routes = Router::new()
+        .route("/api/cases", get(case_handlers::list_cases))
+        .route("/api/cases", post(case_handlers::create_case))
+        .route("/api/cases/:id", get(case_handlers::get_case))
+        .route("/api/cases/:id", put(case_handlers::update_case))
+        .route("/api/cases/:id", delete(case_handlers::delete_case))
+        .route("/api/cases/:id/parties", get(case_handlers::get_case_parties))
+        .with_state(case_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
 
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
-        .merge(protected_routes)
+        .merge(user_protected_routes)
+        .merge(case_protected_routes)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(CompressionLayer::new())
         .layer(cors)
