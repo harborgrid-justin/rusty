@@ -18,6 +18,7 @@ use rusty_saas::{
         health::{health_check, liveness_check, readiness_check},
         users::{handlers as user_handlers, UserService},
         cases::{handlers as case_handlers, CaseService},
+        documents::{handlers as document_handlers, DocumentService},
     },
     auth::AuthService,
     config::Config,
@@ -26,6 +27,7 @@ use rusty_saas::{
     models::{
         CreateUserRequest, HealthResponse, LoginRequest, LoginResponse, UpdateUserRequest,
         UserResponse, Case, CaseResponse, CreateCaseRequest, UpdateCaseRequest, Party,
+        Document, CreateDocumentRequest,
     },
 };
 
@@ -46,6 +48,11 @@ use rusty_saas::{
         case_handlers::update_case,
         case_handlers::delete_case,
         case_handlers::get_case_parties,
+        document_handlers::list_documents,
+        document_handlers::get_document,
+        document_handlers::create_document,
+        document_handlers::update_document,
+        document_handlers::delete_document,
     ),
     components(
         schemas(
@@ -60,6 +67,8 @@ use rusty_saas::{
             CreateCaseRequest,
             UpdateCaseRequest,
             Party,
+            Document,
+            CreateDocumentRequest,
         )
     ),
     modifiers(&SecurityAddon),
@@ -68,6 +77,7 @@ use rusty_saas::{
         (name = "auth", description = "Authentication endpoints"),
         (name = "users", description = "User management endpoints"),
         (name = "cases", description = "Case management endpoints"),
+        (name = "documents", description = "Document management endpoints"),
     )
 )]
 struct ApiDoc;
@@ -129,6 +139,7 @@ async fn main() -> anyhow::Result<()> {
     let auth_service = Arc::new(AuthService::new(Arc::new(config.jwt.clone())));
     let user_service = Arc::new(UserService::new(db.clone(), auth_service.clone()));
     let case_service = Arc::new(CaseService::new(db.pool().clone()));
+    let document_service = Arc::new(DocumentService::new(db.pool().clone()));
 
     // Configure CORS based on environment
     let cors = if config.server.environment == "production" {
@@ -197,11 +208,25 @@ async fn main() -> anyhow::Result<()> {
             auth_middleware,
         ));
 
+    // Build document protected routes
+    let document_protected_routes = Router::new()
+        .route("/api/documents", get(document_handlers::list_documents))
+        .route("/api/documents", post(document_handlers::create_document))
+        .route("/api/documents/:id", get(document_handlers::get_document))
+        .route("/api/documents/:id", put(document_handlers::update_document))
+        .route("/api/documents/:id", delete(document_handlers::delete_document))
+        .with_state(document_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
         .merge(user_protected_routes)
         .merge(case_protected_routes)
+        .merge(document_protected_routes)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(CompressionLayer::new())
         .layer(cors)
