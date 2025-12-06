@@ -1,0 +1,15 @@
+# Production configuration for Rusty SaaS
+# Override default settings for production environment
+
+[server]
+environment = "production"
+
+# Database settings should be provided via environment variables
+# APP_DATABASE__URL=postgres://user:pass@host:5432/dbname
+
+# JWT secret MUST be provided via environment variable
+# APP_JWT__SECRET=your-secure-secret-here
+
+[cors]
+# Update with your actual domains
+allowed_origins = ["https://yourdomain.com"]

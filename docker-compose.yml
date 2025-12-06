@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: rusty_saas_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rusty_saas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Rusty SaaS Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rusty_saas_app
+    ports:
+      - "8080:8080"
+    environment:
+      APP_ENV: production
+      APP_DATABASE__URL: postgres://postgres:postgres@postgres:5432/rusty_saas
+      APP_JWT__SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

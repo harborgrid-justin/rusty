@@ -1,0 +1,80 @@
+[package]
+name = "rusty_saas"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Organization"]
+description = "Enterprise-grade Rust-based SaaS web delivery platform"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/harborgrid-justin/rusty"
+
+[dependencies]
+# Web framework - Modern, async, type-safe
+axum = { version = "0.7", features = ["macros", "multipart"] }
+tokio = { version = "1.42", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "cors", "compression-gzip"] }
+
+# Database - SQLx with PostgreSQL, MySQL, SQLite support
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Authentication & Security
+jsonwebtoken = "9.3"
+argon2 = "0.5"
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Configuration management
+config = "0.14"
+dotenvy = "0.15"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Validation
+validator = { version = "0.19", features = ["derive"] }
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# API documentation (OpenAPI/Swagger)
+utoipa = { version = "5.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "8.0", features = ["axum"] }
+
+# Async runtime
+async-trait = "0.1"
+
+# HTTP client (for external API calls)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Metrics
+prometheus = "0.13"
+
+# Environment and secrets
+secrecy = "0.10"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockall = "0.13"
+fake = { version = "3.0", features = ["derive", "chrono", "uuid"] }
+axum-test = "18.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+
+[profile.test]
+opt-level = 1

@@ -1,0 +1,22 @@
+# Default configuration for Rusty SaaS
+# WARNING: This is a development configuration. Override values in production!
+
+[server]
+host = "0.0.0.0"
+port = 8080
+environment = "development"
+
+[database]
+url = "postgres://postgres:postgres@localhost:5432/rusty_saas"
+max_connections = 10
+min_connections = 2
+
+[jwt]
+# SECURITY WARNING: Change this secret in production!
+# Use APP_JWT__SECRET environment variable in production
+# Generate with: openssl rand -hex 32
+secret = "INSECURE_DEV_SECRET_CHANGE_IN_PRODUCTION_USE_ENV_VAR_MINIMUM_32_CHARS"
+expiration_hours = 24
+
+[cors]
+allowed_origins = ["http://localhost:3000", "http://localhost:8080"]
