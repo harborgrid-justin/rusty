@@ -15,33 +15,43 @@ impl TaskService {
     }
 
     pub async fn list_tasks(&self, params: ListTasksQuery) -> Result<Vec<WorkflowTask>, AppError> {
-        let mut query = String::from(
+        let mut query_str = String::from(
             "SELECT * FROM workflow_tasks WHERE deleted_at IS NULL"
         );
-        let mut conditions = Vec::new();
+        let mut bind_count = 0;
+
+        if params.case_id.is_some() {
+            bind_count += 1;
+            query_str.push_str(&format!(" AND case_id = ${}", bind_count));
+        }
+
+        if params.status.is_some() {
+            bind_count += 1;
+            query_str.push_str(&format!(" AND status::text = ${}", bind_count));
+        }
+
+        if params.assignee_id.is_some() {
+            bind_count += 1;
+            query_str.push_str(&format!(" AND assignee_id = ${}", bind_count));
+        }
+
+        query_str.push_str(" ORDER BY due_date ASC");
+
+        let mut query = sqlx::query_as::<_, WorkflowTask>(&query_str);
 
         if let Some(case_id) = params.case_id {
-            conditions.push(format!("case_id = '{}'", case_id));
+            query = query.bind(case_id);
         }
 
         if let Some(ref status) = params.status {
-            conditions.push(format!("status::text = '{}'", status));
+            query = query.bind(status);
         }
 
         if let Some(assignee_id) = params.assignee_id {
-            conditions.push(format!("assignee_id = '{}'", assignee_id));
+            query = query.bind(assignee_id);
         }
 
-        if !conditions.is_empty() {
-            query.push_str(" AND ");
-            query.push_str(&conditions.join(" AND "));
-        }
-
-        query.push_str(" ORDER BY due_date ASC");
-
-        let tasks = sqlx::query_as::<_, WorkflowTask>(&query)
-            .fetch_all(&self.db)
-            .await?;
+        let tasks = query.fetch_all(&self.db).await?;
 
         Ok(tasks)
     }

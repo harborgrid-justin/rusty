@@ -23,27 +23,48 @@ impl CaseService {
         let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
         let offset = (page - 1) * per_page;
 
-        let mut query = String::from(
+        let mut query_str = String::from(
             "SELECT * FROM cases WHERE deleted_at IS NULL"
         );
+        let mut bind_count = 0;
 
-        if let Some(ref status) = params.status {
-            query.push_str(&format!(" AND status = '{}'", status));
+        if params.status.is_some() {
+            bind_count += 1;
+            query_str.push_str(&format!(" AND status::text = ${}", bind_count));
         }
 
-        if let Some(ref search) = params.search {
-            query.push_str(&format!(
-                " AND (title ILIKE '%{}%' OR client ILIKE '%{}%')",
-                search, search
+        if params.search.is_some() {
+            bind_count += 1;
+            let search_bind_1 = bind_count;
+            bind_count += 1;
+            let search_bind_2 = bind_count;
+            query_str.push_str(&format!(
+                " AND (title ILIKE ${} OR client ILIKE ${})",
+                search_bind_1, search_bind_2
             ));
         }
 
-        query.push_str(" ORDER BY created_at DESC");
-        query.push_str(&format!(" LIMIT {} OFFSET {}", per_page, offset));
+        query_str.push_str(" ORDER BY created_at DESC");
+        bind_count += 1;
+        let limit_bind = bind_count;
+        bind_count += 1;
+        let offset_bind = bind_count;
+        query_str.push_str(&format!(" LIMIT ${} OFFSET ${}", limit_bind, offset_bind));
 
-        let cases = sqlx::query_as::<_, Case>(&query)
-            .fetch_all(&self.db)
-            .await?;
+        let mut query = sqlx::query_as::<_, Case>(&query_str);
+
+        if let Some(ref status) = params.status {
+            query = query.bind(status);
+        }
+
+        if let Some(ref search) = params.search {
+            let search_pattern = format!("%{}%", search);
+            query = query.bind(search_pattern.clone()).bind(search_pattern);
+        }
+
+        query = query.bind(per_page).bind(offset);
+
+        let cases = query.fetch_all(&self.db).await?;
 
         Ok(cases)
     }
