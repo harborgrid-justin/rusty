@@ -19,6 +19,8 @@ use rusty_saas::{
         users::{handlers as user_handlers, UserService},
         cases::{handlers as case_handlers, CaseService},
         documents::{handlers as document_handlers, DocumentService},
+        docket::{handlers as docket_handlers, DocketService},
+        evidence::{handlers as evidence_handlers, EvidenceService},
     },
     auth::AuthService,
     config::Config,
@@ -27,7 +29,7 @@ use rusty_saas::{
     models::{
         CreateUserRequest, HealthResponse, LoginRequest, LoginResponse, UpdateUserRequest,
         UserResponse, Case, CaseResponse, CreateCaseRequest, UpdateCaseRequest, Party,
-        Document, CreateDocumentRequest,
+        Document, CreateDocumentRequest, DocketEntry, EvidenceItem,
     },
 };
 
@@ -53,6 +55,16 @@ use rusty_saas::{
         document_handlers::create_document,
         document_handlers::update_document,
         document_handlers::delete_document,
+        docket_handlers::list_docket_entries,
+        docket_handlers::get_docket_entry,
+        docket_handlers::create_docket_entry,
+        docket_handlers::update_docket_entry,
+        docket_handlers::delete_docket_entry,
+        evidence_handlers::list_evidence,
+        evidence_handlers::get_evidence,
+        evidence_handlers::create_evidence,
+        evidence_handlers::update_evidence,
+        evidence_handlers::delete_evidence,
     ),
     components(
         schemas(
@@ -69,6 +81,8 @@ use rusty_saas::{
             Party,
             Document,
             CreateDocumentRequest,
+            DocketEntry,
+            EvidenceItem,
         )
     ),
     modifiers(&SecurityAddon),
@@ -78,6 +92,8 @@ use rusty_saas::{
         (name = "users", description = "User management endpoints"),
         (name = "cases", description = "Case management endpoints"),
         (name = "documents", description = "Document management endpoints"),
+        (name = "docket", description = "Docket entry management endpoints"),
+        (name = "evidence", description = "Evidence item management endpoints"),
     )
 )]
 struct ApiDoc;
@@ -140,6 +156,8 @@ async fn main() -> anyhow::Result<()> {
     let user_service = Arc::new(UserService::new(db.clone(), auth_service.clone()));
     let case_service = Arc::new(CaseService::new(db.pool().clone()));
     let document_service = Arc::new(DocumentService::new(db.pool().clone()));
+    let docket_service = Arc::new(DocketService::new(db.pool().clone()));
+    let evidence_service = Arc::new(EvidenceService::new(db.pool().clone()));
 
     // Configure CORS based on environment
     let cors = if config.server.environment == "production" {
@@ -221,12 +239,40 @@ async fn main() -> anyhow::Result<()> {
             auth_middleware,
         ));
 
+    // Build docket protected routes
+    let docket_protected_routes = Router::new()
+        .route("/api/docket", get(docket_handlers::list_docket_entries))
+        .route("/api/docket", post(docket_handlers::create_docket_entry))
+        .route("/api/docket/:id", get(docket_handlers::get_docket_entry))
+        .route("/api/docket/:id", put(docket_handlers::update_docket_entry))
+        .route("/api/docket/:id", delete(docket_handlers::delete_docket_entry))
+        .with_state(docket_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
+    // Build evidence protected routes
+    let evidence_protected_routes = Router::new()
+        .route("/api/evidence", get(evidence_handlers::list_evidence))
+        .route("/api/evidence", post(evidence_handlers::create_evidence))
+        .route("/api/evidence/:id", get(evidence_handlers::get_evidence))
+        .route("/api/evidence/:id", put(evidence_handlers::update_evidence))
+        .route("/api/evidence/:id", delete(evidence_handlers::delete_evidence))
+        .with_state(evidence_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
         .merge(user_protected_routes)
         .merge(case_protected_routes)
         .merge(document_protected_routes)
+        .merge(docket_protected_routes)
+        .merge(evidence_protected_routes)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(CompressionLayer::new())
         .layer(cors)
