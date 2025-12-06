@@ -116,11 +116,36 @@ async fn main() -> anyhow::Result<()> {
     let auth_service = Arc::new(AuthService::new(Arc::new(config.jwt.clone())));
     let user_service = Arc::new(UserService::new(db.clone(), auth_service.clone()));
 
-    // Configure CORS
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // Configure CORS based on environment
+    let cors = if config.server.environment == "production" {
+        // Production: strict CORS
+        let allowed_origins: Vec<_> = config
+            .cors
+            .allowed_origins
+            .iter()
+            .filter_map(|origin| origin.parse().ok())
+            .collect();
+        
+        CorsLayer::new()
+            .allow_origin(allowed_origins)
+            .allow_methods([
+                axum::http::Method::GET,
+                axum::http::Method::POST,
+                axum::http::Method::PUT,
+                axum::http::Method::DELETE,
+            ])
+            .allow_headers([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::header::AUTHORIZATION,
+            ])
+    } else {
+        // Development: permissive CORS
+        tracing::warn!("Running in development mode with permissive CORS");
+        CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any)
+    };
 
     // Build public routes (no auth required)
     let public_routes = Router::new()

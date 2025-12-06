@@ -173,7 +173,11 @@ impl UserService {
     }
 
     /// List all users (with pagination in production)
+    /// NOTE: In production, this should implement proper pagination
+    /// and access control (e.g., admin-only access)
     pub async fn list_users(&self) -> Result<Vec<UserResponse>> {
+        // TODO: Implement pagination with page/per_page parameters
+        // TODO: Add role-based access control
         let users =
             sqlx::query_as::<_, User>("SELECT * FROM users ORDER BY created_at DESC LIMIT 100")
                 .fetch_all(self.db.pool())

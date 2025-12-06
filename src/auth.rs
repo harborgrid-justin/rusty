@@ -85,6 +85,14 @@ impl AuthService {
             ));
         }
 
-        Ok(&auth_header[7..])
+        let token = &auth_header[7..];
+        
+        if token.is_empty() {
+            return Err(AppError::Authentication(
+                "Empty token provided".to_string(),
+            ));
+        }
+
+        Ok(token)
     }
 }
