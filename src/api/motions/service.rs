@@ -86,93 +86,44 @@ impl MotionService {
         let existing = self.get_motion(id).await?;
 
         let updated_title = title.unwrap_or(existing.title);
-
-        let motion = if let Some(stat) = status {
-            if let Some(out) = outcome {
-                if let Some(hd) = hearing_date {
-                    sqlx::query_as::<_, Motion>(
-                        r#"
-                        UPDATE motions
-                        SET title = $1, status = $2::motion_status, outcome = $3::motion_outcome, 
-                            hearing_date = $4, updated_at = $5
-                        WHERE id = $6 AND deleted_at IS NULL
-                        RETURNING *
-                        "#,
-                    )
-                    .bind(&updated_title)
-                    .bind(&stat)
-                    .bind(&out)
-                    .bind(hd)
-                    .bind(now)
-                    .bind(id)
-                    .fetch_optional(&self.pool)
-                    .await?
-                } else {
-                    sqlx::query_as::<_, Motion>(
-                        r#"
-                        UPDATE motions
-                        SET title = $1, status = $2::motion_status, outcome = $3::motion_outcome, updated_at = $4
-                        WHERE id = $5 AND deleted_at IS NULL
-                        RETURNING *
-                        "#,
-                    )
-                    .bind(&updated_title)
-                    .bind(&stat)
-                    .bind(&out)
-                    .bind(now)
-                    .bind(id)
-                    .fetch_optional(&self.pool)
-                    .await?
-                }
-            } else if let Some(hd) = hearing_date {
-                sqlx::query_as::<_, Motion>(
-                    r#"
-                    UPDATE motions
-                    SET title = $1, status = $2::motion_status, hearing_date = $3, updated_at = $4
-                    WHERE id = $5 AND deleted_at IS NULL
-                    RETURNING *
-                    "#,
-                )
-                .bind(&updated_title)
-                .bind(&stat)
-                .bind(hd)
-                .bind(now)
-                .bind(id)
-                .fetch_optional(&self.pool)
-                .await?
-            } else {
-                sqlx::query_as::<_, Motion>(
-                    r#"
-                    UPDATE motions
-                    SET title = $1, status = $2::motion_status, updated_at = $3
-                    WHERE id = $4 AND deleted_at IS NULL
-                    RETURNING *
-                    "#,
-                )
-                .bind(&updated_title)
-                .bind(&stat)
-                .bind(now)
-                .bind(id)
-                .fetch_optional(&self.pool)
-                .await?
+        let updated_status = status.unwrap_or_else(|| format!("{:?}", existing.status));
+        
+        // Build dynamic query based on what fields are being updated
+        let base_query = "UPDATE motions SET title = $1, status = $2::motion_status, updated_at = $3";
+        
+        let query = match (outcome.as_ref(), hearing_date) {
+            (Some(_), Some(_)) => {
+                format!("{}, outcome = $4::motion_outcome, hearing_date = $5 WHERE id = $6 AND deleted_at IS NULL RETURNING *", base_query)
+            },
+            (Some(_), None) => {
+                format!("{}, outcome = $4::motion_outcome WHERE id = $5 AND deleted_at IS NULL RETURNING *", base_query)
+            },
+            (None, Some(_)) => {
+                format!("{}, hearing_date = $4 WHERE id = $5 AND deleted_at IS NULL RETURNING *", base_query)
+            },
+            (None, None) => {
+                format!("{} WHERE id = $4 AND deleted_at IS NULL RETURNING *", base_query)
             }
-        } else {
-            sqlx::query_as::<_, Motion>(
-                r#"
-                UPDATE motions
-                SET title = $1, updated_at = $2
-                WHERE id = $3 AND deleted_at IS NULL
-                RETURNING *
-                "#,
-            )
-            .bind(&updated_title)
-            .bind(now)
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?
         };
 
-        motion.ok_or(AppError::NotFound("Motion not found".to_string()))
+        let mut q = sqlx::query_as::<_, Motion>(&query)
+            .bind(&updated_title)
+            .bind(&updated_status)
+            .bind(now);
+
+        // Bind additional parameters based on what's being updated
+        q = match (outcome.as_ref(), hearing_date) {
+            (Some(out), Some(hd)) => q.bind(out).bind(hd).bind(id),
+            (Some(out), None) => q.bind(out).bind(id),
+            (None, Some(hd)) => q.bind(hd).bind(id),
+            (None, None) => q.bind(id),
+        };
+
+        let motion = q.fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound("Motion not found".to_string()))?;
+
+        Ok(motion)
     }
 
     /// Soft delete a motion

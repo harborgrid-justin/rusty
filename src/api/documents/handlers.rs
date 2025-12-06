@@ -1,10 +1,11 @@
 use crate::api::documents::service::DocumentService;
 use crate::error::AppError;
-use crate::models::{CreateDocumentRequest, Document};
+use crate::models::{Claims, CreateDocumentRequest, Document};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::Json,
+    Extension,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -83,10 +84,11 @@ pub async fn get_document(
 )]
 pub async fn create_document(
     State(service): State<Arc<DocumentService>>,
+    Extension(claims): Extension<Claims>,
     Json(req): Json<CreateDocumentRequest>,
 ) -> Result<(StatusCode, Json<Document>), AppError> {
-    // For now, use a placeholder user ID - in production this would come from auth middleware
-    let user_id = Uuid::new_v4();
+    let user_id = Uuid::parse_str(&claims.sub)
+        .map_err(|_| AppError::BadRequest("Invalid user ID in token".to_string()))?;
     
     let doc = service.create_document(req, user_id).await?;
     Ok((StatusCode::CREATED, Json(doc)))
