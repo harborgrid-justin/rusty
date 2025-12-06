@@ -146,6 +146,38 @@ Once the application is running, visit http://localhost:8080/swagger-ui for inte
   - Query params: `case_id`, `status`, `assignee_id`
 - `GET /api/tasks/{id}` - Get specific task details
 
+#### Documents
+- `GET /api/documents` - List documents with optional filtering
+  - Query params: `case_id`
+- `POST /api/documents` - Create a new document
+- `GET /api/documents/{id}` - Get document details
+- `PUT /api/documents/{id}` - Update document
+- `DELETE /api/documents/{id}` - Delete (soft delete) document
+
+#### Docket Entries
+- `GET /api/docket` - List docket entries for a case
+  - Query params: `case_id` (required)
+- `POST /api/docket` - Create a new docket entry
+- `GET /api/docket/{id}` - Get docket entry details
+- `PUT /api/docket/{id}` - Update docket entry
+- `DELETE /api/docket/{id}` - Delete docket entry
+
+#### Evidence Management
+- `GET /api/evidence` - List evidence items for a case
+  - Query params: `case_id` (required)
+- `POST /api/evidence` - Create a new evidence item
+- `GET /api/evidence/{id}` - Get evidence item details
+- `PUT /api/evidence/{id}` - Update evidence item
+- `DELETE /api/evidence/{id}` - Delete evidence item
+
+#### Motions
+- `GET /api/motions` - List motions for a case
+  - Query params: `case_id` (required)
+- `POST /api/motions` - Create a new motion
+- `GET /api/motions/{id}` - Get motion details
+- `PUT /api/motions/{id}` - Update motion
+- `DELETE /api/motions/{id}` - Delete (soft delete) motion
+
 ### Database Schema
 
 The backend includes comprehensive database schema for:

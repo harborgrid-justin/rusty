@@ -21,6 +21,7 @@ use rusty_saas::{
         documents::{handlers as document_handlers, DocumentService},
         docket::{handlers as docket_handlers, DocketService},
         evidence::{handlers as evidence_handlers, EvidenceService},
+        motions::{handlers as motion_handlers, MotionService},
     },
     auth::AuthService,
     config::Config,
@@ -29,7 +30,7 @@ use rusty_saas::{
     models::{
         CreateUserRequest, HealthResponse, LoginRequest, LoginResponse, UpdateUserRequest,
         UserResponse, Case, CaseResponse, CreateCaseRequest, UpdateCaseRequest, Party,
-        Document, CreateDocumentRequest, DocketEntry, EvidenceItem,
+        Document, CreateDocumentRequest, DocketEntry, EvidenceItem, Motion,
     },
 };
 
@@ -65,6 +66,11 @@ use rusty_saas::{
         evidence_handlers::create_evidence,
         evidence_handlers::update_evidence,
         evidence_handlers::delete_evidence,
+        motion_handlers::list_motions,
+        motion_handlers::get_motion,
+        motion_handlers::create_motion,
+        motion_handlers::update_motion,
+        motion_handlers::delete_motion,
     ),
     components(
         schemas(
@@ -83,6 +89,7 @@ use rusty_saas::{
             CreateDocumentRequest,
             DocketEntry,
             EvidenceItem,
+            Motion,
         )
     ),
     modifiers(&SecurityAddon),
@@ -94,6 +101,7 @@ use rusty_saas::{
         (name = "documents", description = "Document management endpoints"),
         (name = "docket", description = "Docket entry management endpoints"),
         (name = "evidence", description = "Evidence item management endpoints"),
+        (name = "motions", description = "Motion management endpoints"),
     )
 )]
 struct ApiDoc;
@@ -158,6 +166,7 @@ async fn main() -> anyhow::Result<()> {
     let document_service = Arc::new(DocumentService::new(db.pool().clone()));
     let docket_service = Arc::new(DocketService::new(db.pool().clone()));
     let evidence_service = Arc::new(EvidenceService::new(db.pool().clone()));
+    let motion_service = Arc::new(MotionService::new(db.pool().clone()));
 
     // Configure CORS based on environment
     let cors = if config.server.environment == "production" {
@@ -265,6 +274,19 @@ async fn main() -> anyhow::Result<()> {
             auth_middleware,
         ));
 
+    // Build motion protected routes
+    let motion_protected_routes = Router::new()
+        .route("/api/motions", get(motion_handlers::list_motions))
+        .route("/api/motions", post(motion_handlers::create_motion))
+        .route("/api/motions/:id", get(motion_handlers::get_motion))
+        .route("/api/motions/:id", put(motion_handlers::update_motion))
+        .route("/api/motions/:id", delete(motion_handlers::delete_motion))
+        .with_state(motion_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
@@ -273,6 +295,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(document_protected_routes)
         .merge(docket_protected_routes)
         .merge(evidence_protected_routes)
+        .merge(motion_protected_routes)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(CompressionLayer::new())
         .layer(cors)

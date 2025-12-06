@@ -6,6 +6,7 @@ pub mod tasks;
 pub mod documents;
 pub mod docket;
 pub mod evidence;
+pub mod motions;
 
 pub use health::*;
 pub use users::*;
@@ -15,3 +16,4 @@ pub use tasks::*;
 pub use documents::*;
 pub use docket::*;
 pub use evidence::*;
+pub use motions::*;
