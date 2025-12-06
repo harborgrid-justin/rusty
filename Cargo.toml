@@ -15,7 +15,8 @@ tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["fs", "trace", "cors", "compression-gzip"] }
 
 # Database - SQLx with PostgreSQL, MySQL, SQLite support
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate", "rust_decimal"] }
+rust_decimal = "1.36"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
