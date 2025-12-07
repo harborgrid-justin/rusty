@@ -4,6 +4,42 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Parameters for creating a new evidence item
+pub struct CreateEvidenceParams {
+    /// ID of the case this evidence belongs to
+    pub case_id: Uuid,
+    /// Title or name of the evidence item
+    pub title: String,
+    /// Type of evidence (e.g., "Physical", "Digital", "Documentary")
+    pub evidence_type: String,
+    /// Detailed description of the evidence
+    pub description: String,
+    /// Name of the person who collected the evidence
+    pub collected_by: String,
+    /// Current custodian of the evidence
+    pub custodian: String,
+    /// Physical or digital location of the evidence
+    pub location: String,
+    /// Tags for categorizing the evidence
+    pub tags: Vec<String>,
+}
+
+/// Parameters for updating an existing evidence item
+pub struct UpdateEvidenceParams {
+    /// Optional new title
+    pub title: Option<String>,
+    /// Optional new description
+    pub description: Option<String>,
+    /// Optional new custodian
+    pub custodian: Option<String>,
+    /// Optional new location
+    pub location: Option<String>,
+    /// Optional new admissibility status
+    pub admissibility: Option<String>,
+    /// Optional new tags
+    pub tags: Option<Vec<String>>,
+}
+
 pub struct EvidenceService {
     pool: PgPool,
 }
@@ -16,7 +52,7 @@ impl EvidenceService {
     /// List evidence items for a case
     pub async fn list_evidence(&self, case_id: Uuid) -> Result<Vec<EvidenceItem>, AppError> {
         let items = sqlx::query_as::<_, EvidenceItem>(
-            "SELECT * FROM evidence_items WHERE case_id = $1 ORDER BY created_at DESC"
+            "SELECT * FROM evidence_items WHERE case_id = $1 ORDER BY created_at DESC",
         )
         .bind(case_id)
         .fetch_all(&self.pool)
@@ -27,29 +63,17 @@ impl EvidenceService {
 
     /// Get a specific evidence item
     pub async fn get_evidence(&self, id: Uuid) -> Result<EvidenceItem, AppError> {
-        let item = sqlx::query_as::<_, EvidenceItem>(
-            "SELECT * FROM evidence_items WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound("Evidence item not found".to_string()))?;
+        let item = sqlx::query_as::<_, EvidenceItem>("SELECT * FROM evidence_items WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound("Evidence item not found".to_string()))?;
 
         Ok(item)
     }
 
     /// Create a new evidence item
-    pub async fn create_evidence(
-        &self,
-        case_id: Uuid,
-        title: String,
-        evidence_type: String,
-        description: String,
-        collected_by: String,
-        custodian: String,
-        location: String,
-        tags: Vec<String>,
-    ) -> Result<EvidenceItem, AppError> {
+    pub async fn create_evidence(&self, params: CreateEvidenceParams) -> Result<EvidenceItem, AppError> {
         let id = Uuid::new_v4();
         let tracking_uuid = Uuid::new_v4();
         let now = Utc::now();
@@ -66,16 +90,16 @@ impl EvidenceService {
             "#,
         )
         .bind(id)
-        .bind(case_id)
-        .bind(&title)
-        .bind(&evidence_type)
-        .bind(&description)
+        .bind(params.case_id)
+        .bind(&params.title)
+        .bind(&params.evidence_type)
+        .bind(&params.description)
         .bind(now)
-        .bind(&collected_by)
-        .bind(&custodian)
-        .bind(&location)
+        .bind(&params.collected_by)
+        .bind(&params.custodian)
+        .bind(&params.location)
         .bind("Pending")
-        .bind(&tags)
+        .bind(&params.tags)
         .bind(tracking_uuid)
         .bind(now)
         .bind(now)
@@ -86,26 +110,17 @@ impl EvidenceService {
     }
 
     /// Update an evidence item
-    pub async fn update_evidence(
-        &self,
-        id: Uuid,
-        title: Option<String>,
-        description: Option<String>,
-        custodian: Option<String>,
-        location: Option<String>,
-        admissibility: Option<String>,
-        tags: Option<Vec<String>>,
-    ) -> Result<EvidenceItem, AppError> {
+    pub async fn update_evidence(&self, id: Uuid, params: UpdateEvidenceParams) -> Result<EvidenceItem, AppError> {
         let now = Utc::now();
         let existing = self.get_evidence(id).await?;
 
-        let updated_title = title.unwrap_or(existing.title);
-        let updated_description = description.unwrap_or(existing.description);
-        let updated_custodian = custodian.unwrap_or(existing.custodian);
-        let updated_location = location.unwrap_or(existing.location);
-        let updated_tags = tags.unwrap_or(existing.tags);
+        let updated_title = params.title.unwrap_or(existing.title);
+        let updated_description = params.description.unwrap_or(existing.description);
+        let updated_custodian = params.custodian.unwrap_or(existing.custodian);
+        let updated_location = params.location.unwrap_or(existing.location);
+        let updated_tags = params.tags.unwrap_or(existing.tags);
 
-        let item = if let Some(adm) = admissibility {
+        let item = if let Some(adm) = params.admissibility {
             sqlx::query_as::<_, EvidenceItem>(
                 r#"
                 UPDATE evidence_items

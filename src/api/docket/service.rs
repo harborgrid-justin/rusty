@@ -1,8 +1,26 @@
 use crate::error::AppError;
 use crate::models::DocketEntry;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+/// Parameters for creating a new docket entry
+pub struct CreateDocketEntryParams {
+    /// ID of the case this docket entry belongs to
+    pub case_id: Uuid,
+    /// Sequential number of the entry in the docket
+    pub sequence_number: i32,
+    /// Type of docket entry (e.g., "Motion", "Order", "Filing")
+    pub entry_type: String,
+    /// Title or brief description of the entry
+    pub title: String,
+    /// Detailed description of the entry (optional)
+    pub description: Option<String>,
+    /// Date of the entry (defaults to current time if not provided)
+    pub date: Option<DateTime<Utc>>,
+    /// Name of the person or party filing the entry (optional)
+    pub filed_by: Option<String>,
+}
 
 pub struct DocketService {
     pool: PgPool,
@@ -27,31 +45,20 @@ impl DocketService {
 
     /// Get a specific docket entry
     pub async fn get_entry(&self, id: Uuid) -> Result<DocketEntry, AppError> {
-        let entry = sqlx::query_as::<_, DocketEntry>(
-            "SELECT * FROM docket_entries WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound("Docket entry not found".to_string()))?;
+        let entry = sqlx::query_as::<_, DocketEntry>("SELECT * FROM docket_entries WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound("Docket entry not found".to_string()))?;
 
         Ok(entry)
     }
 
     /// Create a new docket entry
-    pub async fn create_entry(
-        &self,
-        case_id: Uuid,
-        sequence_number: i32,
-        entry_type: String,
-        title: String,
-        description: Option<String>,
-        date: Option<chrono::DateTime<Utc>>,
-        filed_by: Option<String>,
-    ) -> Result<DocketEntry, AppError> {
+    pub async fn create_entry(&self, params: CreateDocketEntryParams) -> Result<DocketEntry, AppError> {
         let id = Uuid::new_v4();
         let now = Utc::now();
-        let entry_date = date.unwrap_or(now);
+        let entry_date = params.date.unwrap_or(now);
 
         let entry = sqlx::query_as::<_, DocketEntry>(
             r#"
@@ -63,13 +70,13 @@ impl DocketService {
             "#,
         )
         .bind(id)
-        .bind(case_id)
-        .bind(sequence_number)
-        .bind(&entry_type)
-        .bind(&title)
-        .bind(&description)
+        .bind(params.case_id)
+        .bind(params.sequence_number)
+        .bind(&params.entry_type)
+        .bind(&params.title)
+        .bind(&params.description)
         .bind(entry_date)
-        .bind(&filed_by)
+        .bind(&params.filed_by)
         .bind(now)
         .bind(now)
         .fetch_one(&self.pool)

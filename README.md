@@ -369,7 +369,36 @@ To add new features:
 - Structured logging with tracing
 - Health check endpoints for orchestrators
 - Request/response logging middleware
-- Metrics collection ready
+- Prometheus metrics integration
+- Grafana dashboards for visualization
+
+## 📚 Documentation
+
+### Quick Links
+
+- **[Deployment Guide](DEPLOYMENT.md)**: Production deployment and configuration
+- **[Operations Runbook](OPERATIONS.md)**: Incident response and common operations
+- **[Logging Guide](LOGGING.md)**: Logging configuration and best practices
+- **[Backup & DR](BACKUP_DR.md)**: Backup and disaster recovery procedures
+- **[Security Guide](SECURITY.md)**: Security best practices and considerations
+- **[Architecture](ARCHITECTURE.md)**: System architecture and design decisions
+- **[Quick Start](QUICKSTART.md)**: Getting started quickly
+- **[API Examples](API_EXAMPLES.md)**: API usage examples
+- **[Extending](EXTENDING.md)**: How to extend the platform
+
+### For Developers
+
+- **Quick Start**: See [QUICKSTART.md](QUICKSTART.md) for development setup
+- **API Documentation**: http://localhost:8080/swagger-ui after starting the app
+- **Architecture**: Review [ARCHITECTURE.md](ARCHITECTURE.md) for design decisions
+- **Examples**: Check [API_EXAMPLES.md](API_EXAMPLES.md) for usage patterns
+
+### For Operations
+
+- **Deployment**: Follow [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment
+- **Operations**: Use [OPERATIONS.md](OPERATIONS.md) for daily operations and incident response
+- **Monitoring**: Configure monitoring using [DEPLOYMENT.md](DEPLOYMENT.md#monitoring-and-observability)
+- **Backups**: Implement backup strategy from [BACKUP_DR.md](BACKUP_DR.md)
 
 ## 🤝 Contributing
 

@@ -24,7 +24,7 @@ impl DocumentService {
             .await?
         } else {
             sqlx::query_as::<_, Document>(
-                "SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY created_at DESC"
+                "SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY created_at DESC",
             )
             .fetch_all(&self.pool)
             .await?
@@ -36,7 +36,7 @@ impl DocumentService {
     /// Get document by ID
     pub async fn get_document(&self, id: Uuid) -> Result<Document, AppError> {
         let doc = sqlx::query_as::<_, Document>(
-            "SELECT * FROM documents WHERE id = $1 AND deleted_at IS NULL"
+            "SELECT * FROM documents WHERE id = $1 AND deleted_at IS NULL",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -127,7 +127,7 @@ impl DocumentService {
         let now = Utc::now();
 
         let result = sqlx::query(
-            "UPDATE documents SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL"
+            "UPDATE documents SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL",
         )
         .bind(now)
         .bind(id)

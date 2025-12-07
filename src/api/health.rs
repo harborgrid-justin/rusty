@@ -2,7 +2,7 @@ use axum::{extract::State, Json};
 use chrono::Utc;
 use std::sync::Arc;
 
-use crate::api::UserService;
+use crate::api::users::UserService;
 use crate::error::Result;
 use crate::models::HealthResponse;
 

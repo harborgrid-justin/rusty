@@ -1,30 +1,30 @@
 // Core entities
-pub mod user;
-pub mod case_management;
-pub mod document;
-pub mod workflow;
-pub mod litigation;
-pub mod discovery;
 pub mod billing;
-pub mod compliance;
-pub mod organization;
+pub mod case_management;
 pub mod communication;
+pub mod compliance;
+pub mod discovery;
+pub mod document;
+pub mod litigation;
+pub mod organization;
+pub mod user;
+pub mod workflow;
 
 // Re-export commonly used types
-pub use user::*;
-pub use case_management::*;
-pub use document::*;
-pub use workflow::*;
-pub use litigation::*;
-pub use discovery::*;
 pub use billing::*;
-pub use compliance::*;
-pub use organization::*;
+pub use case_management::*;
 pub use communication::*;
+pub use compliance::*;
+pub use discovery::*;
+pub use document::*;
+pub use litigation::*;
+pub use organization::*;
+pub use user::*;
+pub use workflow::*;
 
 // Common response types
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use utoipa::ToSchema;
 
 /// Health check response

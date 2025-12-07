@@ -7,17 +7,25 @@ services:
     container_name: rusty_saas_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: rusty_saas
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    networks:
+      - rusty_network
+    # Security: Run as non-root
+    user: postgres
 
   # Rusty SaaS Application
   app:
@@ -26,16 +34,104 @@ services:
       dockerfile: Dockerfile
     container_name: rusty_saas_app
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
-      APP_ENV: production
-      APP_DATABASE__URL: postgres://postgres:postgres@postgres:5432/rusty_saas
+      APP_ENV: ${APP_ENV:-production}
+      APP_DATABASE__URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/rusty_saas
       APP_JWT__SECRET: ${JWT_SECRET:-change-this-secret-in-production}
-      RUST_LOG: info
+      APP_CORS__ALLOWED_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      RUST_LOG: ${RUST_LOG:-info}
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - rusty_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    # Resource limits for production stability
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis for caching and session storage (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: rusty_saas_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rusty_network
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+
+  # Prometheus for metrics (monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rusty_saas_prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+    restart: unless-stopped
+    networks:
+      - rusty_network
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (monitoring)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rusty_saas_grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - rusty_network
+    profiles:
+      - monitoring
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  rusty_network:
+    driver: bridge

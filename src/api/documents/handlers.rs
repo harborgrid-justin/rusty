@@ -89,7 +89,7 @@ pub async fn create_document(
 ) -> Result<(StatusCode, Json<Document>), AppError> {
     let user_id = Uuid::parse_str(&claims.sub)
         .map_err(|_| AppError::BadRequest("Invalid user ID in token".to_string()))?;
-    
+
     let doc = service.create_document(req, user_id).await?;
     Ok((StatusCode::CREATED, Json(doc)))
 }
@@ -115,7 +115,9 @@ pub async fn update_document(
     Path(id): Path<Uuid>,
     Json(req): Json<UpdateDocumentRequest>,
 ) -> Result<Json<Document>, AppError> {
-    let doc = service.update_document(id, req.title, req.content, req.tags).await?;
+    let doc = service
+        .update_document(id, req.title, req.content, req.tags)
+        .await?;
     Ok(Json(doc))
 }
 

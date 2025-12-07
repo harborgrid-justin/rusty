@@ -97,7 +97,13 @@ pub async fn create_motion(
     Json(req): Json<CreateMotionRequest>,
 ) -> Result<(StatusCode, Json<Motion>), AppError> {
     let motion = service
-        .create_motion(req.case_id, req.title, req.motion_type, req.status, req.filing_date)
+        .create_motion(
+            req.case_id,
+            req.title,
+            req.motion_type,
+            req.status,
+            req.filing_date,
+        )
         .await?;
     Ok((StatusCode::CREATED, Json(motion)))
 }

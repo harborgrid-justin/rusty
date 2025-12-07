@@ -102,16 +102,16 @@ pub async fn create_evidence(
 ) -> Result<(StatusCode, Json<EvidenceItem>), AppError> {
     let tags = req.tags.unwrap_or_default();
     let item = service
-        .create_evidence(
-            req.case_id,
-            req.title,
-            req.evidence_type,
-            req.description,
-            req.collected_by,
-            req.custodian,
-            req.location,
+        .create_evidence(crate::api::evidence::service::CreateEvidenceParams {
+            case_id: req.case_id,
+            title: req.title,
+            evidence_type: req.evidence_type,
+            description: req.description,
+            collected_by: req.collected_by,
+            custodian: req.custodian,
+            location: req.location,
             tags,
-        )
+        })
         .await?;
     Ok((StatusCode::CREATED, Json(item)))
 }
@@ -140,12 +140,14 @@ pub async fn update_evidence(
     let item = service
         .update_evidence(
             id,
-            req.title,
-            req.description,
-            req.custodian,
-            req.location,
-            req.admissibility,
-            req.tags,
+            crate::api::evidence::service::UpdateEvidenceParams {
+                title: req.title,
+                description: req.description,
+                custodian: req.custodian,
+                location: req.location,
+                admissibility: req.admissibility,
+                tags: req.tags,
+            },
         )
         .await?;
     Ok(Json(item))

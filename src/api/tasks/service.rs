@@ -15,9 +15,7 @@ impl TaskService {
     }
 
     pub async fn list_tasks(&self, params: ListTasksQuery) -> Result<Vec<WorkflowTask>, AppError> {
-        let mut query_str = String::from(
-            "SELECT * FROM workflow_tasks WHERE deleted_at IS NULL"
-        );
+        let mut query_str = String::from("SELECT * FROM workflow_tasks WHERE deleted_at IS NULL");
         let mut bind_count = 0;
 
         if params.case_id.is_some() {
@@ -58,7 +56,7 @@ impl TaskService {
 
     pub async fn get_task(&self, id: Uuid) -> Result<WorkflowTask, AppError> {
         let task = sqlx::query_as::<_, WorkflowTask>(
-            "SELECT * FROM workflow_tasks WHERE id = $1 AND deleted_at IS NULL"
+            "SELECT * FROM workflow_tasks WHERE id = $1 AND deleted_at IS NULL",
         )
         .bind(id)
         .fetch_optional(&self.db)
