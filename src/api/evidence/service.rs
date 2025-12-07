@@ -4,23 +4,39 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Parameters for creating a new evidence item
 pub struct CreateEvidenceParams {
+    /// ID of the case this evidence belongs to
     pub case_id: Uuid,
+    /// Title or name of the evidence item
     pub title: String,
+    /// Type of evidence (e.g., "Physical", "Digital", "Documentary")
     pub evidence_type: String,
+    /// Detailed description of the evidence
     pub description: String,
+    /// Name of the person who collected the evidence
     pub collected_by: String,
+    /// Current custodian of the evidence
     pub custodian: String,
+    /// Physical or digital location of the evidence
     pub location: String,
+    /// Tags for categorizing the evidence
     pub tags: Vec<String>,
 }
 
+/// Parameters for updating an existing evidence item
 pub struct UpdateEvidenceParams {
+    /// Optional new title
     pub title: Option<String>,
+    /// Optional new description
     pub description: Option<String>,
+    /// Optional new custodian
     pub custodian: Option<String>,
+    /// Optional new location
     pub location: Option<String>,
+    /// Optional new admissibility status
     pub admissibility: Option<String>,
+    /// Optional new tags
     pub tags: Option<Vec<String>>,
 }
 

@@ -1,5 +1,14 @@
 # Production docker-compose configuration
 # Use this for production deployments with proper secrets management
+#
+# Before using this file:
+# 1. Create ./secrets/ directory
+# 2. Create files: db_user.txt, db_password.txt, jwt_secret.txt
+# 3. Set appropriate permissions: chmod 600 ./secrets/*
+# 4. Configure environment variables in .env file
+#
+# Note: The application needs to be updated to read database credentials
+# from _FILE environment variables for full secrets support.
 
 version: '3.8'
 
@@ -48,13 +57,20 @@ services:
       APP_ENV: production
       APP_SERVER__HOST: 0.0.0.0
       APP_SERVER__PORT: 8080
-      APP_DATABASE__URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rusty_saas}
+      # Database connection uses secrets - construct URL in application code
+      APP_DATABASE__HOST: postgres
+      APP_DATABASE__PORT: 5432
+      APP_DATABASE__NAME: ${POSTGRES_DB:-rusty_saas}
+      APP_DATABASE__USER_FILE: /run/secrets/db_user
+      APP_DATABASE__PASSWORD_FILE: /run/secrets/db_password
       APP_JWT__SECRET_FILE: /run/secrets/jwt_secret
       APP_CORS__ALLOWED_ORIGINS: ${CORS_ORIGINS}
       RUST_LOG: info
       RUST_BACKTRACE: 0
     secrets:
       - jwt_secret
+      - db_user
+      - db_password
     ports:
       - "127.0.0.1:8080:8080"  # Only bind to localhost, use nginx reverse proxy
     depends_on:
@@ -124,6 +140,8 @@ services:
 secrets:
   db_password:
     file: ./secrets/db_password.txt
+  db_user:
+    file: ./secrets/db_user.txt
   jwt_secret:
     file: ./secrets/jwt_secret.txt
 

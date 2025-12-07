@@ -4,13 +4,21 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// Parameters for creating a new docket entry
 pub struct CreateDocketEntryParams {
+    /// ID of the case this docket entry belongs to
     pub case_id: Uuid,
+    /// Sequential number of the entry in the docket
     pub sequence_number: i32,
+    /// Type of docket entry (e.g., "Motion", "Order", "Filing")
     pub entry_type: String,
+    /// Title or brief description of the entry
     pub title: String,
+    /// Detailed description of the entry (optional)
     pub description: Option<String>,
+    /// Date of the entry (defaults to current time if not provided)
     pub date: Option<DateTime<Utc>>,
+    /// Name of the person or party filing the entry (optional)
     pub filed_by: Option<String>,
 }
 
