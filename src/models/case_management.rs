@@ -117,10 +117,10 @@ pub struct Party {
 pub struct CreateCaseRequest {
     #[validate(length(min = 1, max = 500))]
     pub title: String,
-    
+
     #[validate(length(min = 1, max = 255))]
     pub client: String,
-    
+
     pub client_id: Option<Uuid>,
     pub matter_type: MatterType,
     pub matter_sub_type: Option<String>,
@@ -161,13 +161,13 @@ pub struct CaseResponse {
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreatePartyRequest {
     pub case_id: Uuid,
-    
+
     #[validate(length(min = 1, max = 255))]
     pub name: String,
-    
+
     #[validate(length(min = 1, max = 100))]
     pub role: String,
-    
+
     pub party_type: String,
     pub contact: Option<String>,
     pub counsel: Option<String>,

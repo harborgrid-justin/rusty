@@ -28,7 +28,7 @@ impl MotionService {
     /// Get a specific motion
     pub async fn get_motion(&self, id: Uuid) -> Result<Motion, AppError> {
         let motion = sqlx::query_as::<_, Motion>(
-            "SELECT * FROM motions WHERE id = $1 AND deleted_at IS NULL"
+            "SELECT * FROM motions WHERE id = $1 AND deleted_at IS NULL",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -87,22 +87,29 @@ impl MotionService {
 
         let updated_title = title.unwrap_or(existing.title);
         let updated_status = status.unwrap_or_else(|| format!("{:?}", existing.status));
-        
+
         // Build dynamic query based on what fields are being updated
-        let base_query = "UPDATE motions SET title = $1, status = $2::motion_status, updated_at = $3";
-        
+        let base_query =
+            "UPDATE motions SET title = $1, status = $2::motion_status, updated_at = $3";
+
         let query = match (outcome.as_ref(), hearing_date) {
             (Some(_), Some(_)) => {
                 format!("{}, outcome = $4::motion_outcome, hearing_date = $5 WHERE id = $6 AND deleted_at IS NULL RETURNING *", base_query)
-            },
+            }
             (Some(_), None) => {
                 format!("{}, outcome = $4::motion_outcome WHERE id = $5 AND deleted_at IS NULL RETURNING *", base_query)
-            },
+            }
             (None, Some(_)) => {
-                format!("{}, hearing_date = $4 WHERE id = $5 AND deleted_at IS NULL RETURNING *", base_query)
-            },
+                format!(
+                    "{}, hearing_date = $4 WHERE id = $5 AND deleted_at IS NULL RETURNING *",
+                    base_query
+                )
+            }
             (None, None) => {
-                format!("{} WHERE id = $4 AND deleted_at IS NULL RETURNING *", base_query)
+                format!(
+                    "{} WHERE id = $4 AND deleted_at IS NULL RETURNING *",
+                    base_query
+                )
             }
         };
 
@@ -119,7 +126,8 @@ impl MotionService {
             (None, None) => q.bind(id),
         };
 
-        let motion = q.fetch_optional(&self.pool)
+        let motion = q
+            .fetch_optional(&self.pool)
             .await?
             .ok_or(AppError::NotFound("Motion not found".to_string()))?;
 
@@ -130,13 +138,12 @@ impl MotionService {
     pub async fn delete_motion(&self, id: Uuid) -> Result<(), AppError> {
         let now = Utc::now();
 
-        let result = sqlx::query(
-            "UPDATE motions SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL"
-        )
-        .bind(now)
-        .bind(id)
-        .execute(&self.pool)
-        .await?;
+        let result =
+            sqlx::query("UPDATE motions SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL")
+                .bind(now)
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::NotFound("Motion not found".to_string()));

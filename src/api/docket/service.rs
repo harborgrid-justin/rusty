@@ -27,13 +27,11 @@ impl DocketService {
 
     /// Get a specific docket entry
     pub async fn get_entry(&self, id: Uuid) -> Result<DocketEntry, AppError> {
-        let entry = sqlx::query_as::<_, DocketEntry>(
-            "SELECT * FROM docket_entries WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound("Docket entry not found".to_string()))?;
+        let entry = sqlx::query_as::<_, DocketEntry>("SELECT * FROM docket_entries WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound("Docket entry not found".to_string()))?;
 
         Ok(entry)
     }

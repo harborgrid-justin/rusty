@@ -23,9 +23,7 @@ impl CaseService {
         let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
         let offset = (page - 1) * per_page;
 
-        let mut query_str = String::from(
-            "SELECT * FROM cases WHERE deleted_at IS NULL"
-        );
+        let mut query_str = String::from("SELECT * FROM cases WHERE deleted_at IS NULL");
         let mut bind_count = 0;
 
         if params.status.is_some() {
@@ -70,13 +68,12 @@ impl CaseService {
     }
 
     pub async fn get_case(&self, id: Uuid) -> Result<CaseResponse, AppError> {
-        let case = sqlx::query_as::<_, Case>(
-            "SELECT * FROM cases WHERE id = $1 AND deleted_at IS NULL"
-        )
-        .bind(id)
-        .fetch_optional(&self.db)
-        .await?
-        .ok_or(AppError::NotFound("Case not found".to_string()))?;
+        let case =
+            sqlx::query_as::<_, Case>("SELECT * FROM cases WHERE id = $1 AND deleted_at IS NULL")
+                .bind(id)
+                .fetch_optional(&self.db)
+                .await?
+                .ok_or(AppError::NotFound("Case not found".to_string()))?;
 
         let parties = self.get_case_parties(id).await?;
 
@@ -93,14 +90,18 @@ impl CaseService {
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
             RETURNING *
-            "#
+            "#,
         )
         .bind(&payload.title)
         .bind(&payload.client)
         .bind(payload.client_id)
         .bind(&payload.matter_type)
         .bind(&payload.matter_sub_type)
-        .bind(payload.status.unwrap_or(crate::models::CaseStatus::PreFiling))
+        .bind(
+            payload
+                .status
+                .unwrap_or(crate::models::CaseStatus::PreFiling),
+        )
         .bind(payload.filing_date)
         .bind(&payload.description)
         .bind(payload.value)
@@ -114,7 +115,11 @@ impl CaseService {
         Ok(case)
     }
 
-    pub async fn update_case(&self, id: Uuid, payload: UpdateCaseRequest) -> Result<Case, AppError> {
+    pub async fn update_case(
+        &self,
+        id: Uuid,
+        payload: UpdateCaseRequest,
+    ) -> Result<Case, AppError> {
         // First, verify the case exists
         let _existing = self.get_case(id).await?;
 
@@ -136,7 +141,7 @@ impl CaseService {
                 version = version + 1
             WHERE id = $1 AND deleted_at IS NULL
             RETURNING *
-            "#
+            "#,
         )
         .bind(id)
         .bind(&payload.title)
@@ -157,12 +162,11 @@ impl CaseService {
 
     pub async fn delete_case(&self, id: Uuid) -> Result<(), AppError> {
         // Soft delete
-        let result = sqlx::query(
-            "UPDATE cases SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL"
-        )
-        .bind(id)
-        .execute(&self.db)
-        .await?;
+        let result =
+            sqlx::query("UPDATE cases SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL")
+                .bind(id)
+                .execute(&self.db)
+                .await?;
 
         if result.rows_affected() == 0 {
             return Err(AppError::NotFound("Case not found".to_string()));
@@ -173,7 +177,7 @@ impl CaseService {
 
     pub async fn get_case_parties(&self, case_id: Uuid) -> Result<Vec<Party>, AppError> {
         let parties = sqlx::query_as::<_, Party>(
-            "SELECT * FROM parties WHERE case_id = $1 AND deleted_at IS NULL ORDER BY created_at"
+            "SELECT * FROM parties WHERE case_id = $1 AND deleted_at IS NULL ORDER BY created_at",
         )
         .bind(case_id)
         .fetch_all(&self.db)

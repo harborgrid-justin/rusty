@@ -15,22 +15,22 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use rusty_saas::{
     api::{
-        health::{health_check, liveness_check, readiness_check},
-        users::{handlers as user_handlers, UserService},
         cases::{handlers as case_handlers, CaseService},
-        documents::{handlers as document_handlers, DocumentService},
         docket::{handlers as docket_handlers, DocketService},
+        documents::{handlers as document_handlers, DocumentService},
         evidence::{handlers as evidence_handlers, EvidenceService},
+        health::{health_check, liveness_check, readiness_check},
         motions::{handlers as motion_handlers, MotionService},
+        users::{handlers as user_handlers, UserService},
     },
     auth::AuthService,
     config::Config,
     db::Database,
     middleware::{auth_middleware, metrics_middleware, request_id_middleware},
     models::{
-        CreateUserRequest, HealthResponse, LoginRequest, LoginResponse, UpdateUserRequest,
-        UserResponse, Case, CaseResponse, CreateCaseRequest, UpdateCaseRequest, Party,
-        Document, CreateDocumentRequest, DocketEntry, EvidenceItem, Motion,
+        Case, CaseResponse, CreateCaseRequest, CreateDocumentRequest, CreateUserRequest,
+        DocketEntry, Document, EvidenceItem, HealthResponse, LoginRequest, LoginResponse, Motion,
+        Party, UpdateCaseRequest, UpdateUserRequest, UserResponse,
     },
 };
 
@@ -177,7 +177,7 @@ async fn main() -> anyhow::Result<()> {
             .iter()
             .filter_map(|origin| origin.parse().ok())
             .collect();
-        
+
         CorsLayer::new()
             .allow_origin(allowed_origins)
             .allow_methods([
@@ -228,7 +228,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/cases/:id", get(case_handlers::get_case))
         .route("/api/cases/:id", put(case_handlers::update_case))
         .route("/api/cases/:id", delete(case_handlers::delete_case))
-        .route("/api/cases/:id/parties", get(case_handlers::get_case_parties))
+        .route(
+            "/api/cases/:id/parties",
+            get(case_handlers::get_case_parties),
+        )
         .with_state(case_service)
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),
@@ -240,8 +243,14 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/documents", get(document_handlers::list_documents))
         .route("/api/documents", post(document_handlers::create_document))
         .route("/api/documents/:id", get(document_handlers::get_document))
-        .route("/api/documents/:id", put(document_handlers::update_document))
-        .route("/api/documents/:id", delete(document_handlers::delete_document))
+        .route(
+            "/api/documents/:id",
+            put(document_handlers::update_document),
+        )
+        .route(
+            "/api/documents/:id",
+            delete(document_handlers::delete_document),
+        )
         .with_state(document_service)
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),
@@ -254,7 +263,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/docket", post(docket_handlers::create_docket_entry))
         .route("/api/docket/:id", get(docket_handlers::get_docket_entry))
         .route("/api/docket/:id", put(docket_handlers::update_docket_entry))
-        .route("/api/docket/:id", delete(docket_handlers::delete_docket_entry))
+        .route(
+            "/api/docket/:id",
+            delete(docket_handlers::delete_docket_entry),
+        )
         .with_state(docket_service)
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),
@@ -267,7 +279,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/evidence", post(evidence_handlers::create_evidence))
         .route("/api/evidence/:id", get(evidence_handlers::get_evidence))
         .route("/api/evidence/:id", put(evidence_handlers::update_evidence))
-        .route("/api/evidence/:id", delete(evidence_handlers::delete_evidence))
+        .route(
+            "/api/evidence/:id",
+            delete(evidence_handlers::delete_evidence),
+        )
         .with_state(evidence_service)
         .route_layer(middleware::from_fn_with_state(
             auth_service.clone(),

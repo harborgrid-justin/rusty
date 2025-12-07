@@ -16,7 +16,7 @@ impl EvidenceService {
     /// List evidence items for a case
     pub async fn list_evidence(&self, case_id: Uuid) -> Result<Vec<EvidenceItem>, AppError> {
         let items = sqlx::query_as::<_, EvidenceItem>(
-            "SELECT * FROM evidence_items WHERE case_id = $1 ORDER BY created_at DESC"
+            "SELECT * FROM evidence_items WHERE case_id = $1 ORDER BY created_at DESC",
         )
         .bind(case_id)
         .fetch_all(&self.pool)
@@ -27,13 +27,11 @@ impl EvidenceService {
 
     /// Get a specific evidence item
     pub async fn get_evidence(&self, id: Uuid) -> Result<EvidenceItem, AppError> {
-        let item = sqlx::query_as::<_, EvidenceItem>(
-            "SELECT * FROM evidence_items WHERE id = $1"
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?
-        .ok_or(AppError::NotFound("Evidence item not found".to_string()))?;
+        let item = sqlx::query_as::<_, EvidenceItem>("SELECT * FROM evidence_items WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .ok_or(AppError::NotFound("Evidence item not found".to_string()))?;
 
         Ok(item)
     }

@@ -16,7 +16,7 @@ impl DashboardService {
     pub async fn get_stats(&self) -> Result<DashboardStats, AppError> {
         // Get active cases count
         let active_cases: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM cases WHERE status != 'Closed' AND deleted_at IS NULL"
+            "SELECT COUNT(*) FROM cases WHERE status != 'Closed' AND deleted_at IS NULL",
         )
         .fetch_one(&self.db)
         .await?;
@@ -30,7 +30,7 @@ impl DashboardService {
 
         // Get total billable hours (placeholder calculation)
         let billable_hours: f64 = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(duration), 0.0) FROM time_entries WHERE deleted_at IS NULL"
+            "SELECT COALESCE(SUM(duration), 0.0) FROM time_entries WHERE deleted_at IS NULL",
         )
         .fetch_one(&self.db)
         .await
@@ -100,7 +100,7 @@ impl DashboardService {
                 AND deleted_at IS NULL
             ORDER BY due_date
             LIMIT 5
-            "#
+            "#,
         )
         .fetch_all(&self.db)
         .await?;
