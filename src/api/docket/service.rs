@@ -1,8 +1,18 @@
 use crate::error::AppError;
 use crate::models::DocketEntry;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+pub struct CreateDocketEntryParams {
+    pub case_id: Uuid,
+    pub sequence_number: i32,
+    pub entry_type: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub date: Option<DateTime<Utc>>,
+    pub filed_by: Option<String>,
+}
 
 pub struct DocketService {
     pool: PgPool,
@@ -37,19 +47,10 @@ impl DocketService {
     }
 
     /// Create a new docket entry
-    pub async fn create_entry(
-        &self,
-        case_id: Uuid,
-        sequence_number: i32,
-        entry_type: String,
-        title: String,
-        description: Option<String>,
-        date: Option<chrono::DateTime<Utc>>,
-        filed_by: Option<String>,
-    ) -> Result<DocketEntry, AppError> {
+    pub async fn create_entry(&self, params: CreateDocketEntryParams) -> Result<DocketEntry, AppError> {
         let id = Uuid::new_v4();
         let now = Utc::now();
-        let entry_date = date.unwrap_or(now);
+        let entry_date = params.date.unwrap_or(now);
 
         let entry = sqlx::query_as::<_, DocketEntry>(
             r#"
@@ -61,13 +62,13 @@ impl DocketService {
             "#,
         )
         .bind(id)
-        .bind(case_id)
-        .bind(sequence_number)
-        .bind(&entry_type)
-        .bind(&title)
-        .bind(&description)
+        .bind(params.case_id)
+        .bind(params.sequence_number)
+        .bind(&params.entry_type)
+        .bind(&params.title)
+        .bind(&params.description)
         .bind(entry_date)
-        .bind(&filed_by)
+        .bind(&params.filed_by)
         .bind(now)
         .bind(now)
         .fetch_one(&self.pool)

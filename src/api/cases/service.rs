@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{

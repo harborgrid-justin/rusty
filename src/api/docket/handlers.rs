@@ -97,15 +97,15 @@ pub async fn create_docket_entry(
     Json(req): Json<CreateDocketEntryRequest>,
 ) -> Result<(StatusCode, Json<DocketEntry>), AppError> {
     let entry = service
-        .create_entry(
-            req.case_id,
-            req.sequence_number,
-            req.entry_type,
-            req.title,
-            req.description,
-            req.date,
-            req.filed_by,
-        )
+        .create_entry(crate::api::docket::service::CreateDocketEntryParams {
+            case_id: req.case_id,
+            sequence_number: req.sequence_number,
+            entry_type: req.entry_type,
+            title: req.title,
+            description: req.description,
+            date: req.date,
+            filed_by: req.filed_by,
+        })
         .await?;
     Ok((StatusCode::CREATED, Json(entry)))
 }

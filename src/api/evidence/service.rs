@@ -4,6 +4,26 @@ use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+pub struct CreateEvidenceParams {
+    pub case_id: Uuid,
+    pub title: String,
+    pub evidence_type: String,
+    pub description: String,
+    pub collected_by: String,
+    pub custodian: String,
+    pub location: String,
+    pub tags: Vec<String>,
+}
+
+pub struct UpdateEvidenceParams {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub custodian: Option<String>,
+    pub location: Option<String>,
+    pub admissibility: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
 pub struct EvidenceService {
     pool: PgPool,
 }
@@ -37,17 +57,7 @@ impl EvidenceService {
     }
 
     /// Create a new evidence item
-    pub async fn create_evidence(
-        &self,
-        case_id: Uuid,
-        title: String,
-        evidence_type: String,
-        description: String,
-        collected_by: String,
-        custodian: String,
-        location: String,
-        tags: Vec<String>,
-    ) -> Result<EvidenceItem, AppError> {
+    pub async fn create_evidence(&self, params: CreateEvidenceParams) -> Result<EvidenceItem, AppError> {
         let id = Uuid::new_v4();
         let tracking_uuid = Uuid::new_v4();
         let now = Utc::now();
@@ -64,16 +74,16 @@ impl EvidenceService {
             "#,
         )
         .bind(id)
-        .bind(case_id)
-        .bind(&title)
-        .bind(&evidence_type)
-        .bind(&description)
+        .bind(params.case_id)
+        .bind(&params.title)
+        .bind(&params.evidence_type)
+        .bind(&params.description)
         .bind(now)
-        .bind(&collected_by)
-        .bind(&custodian)
-        .bind(&location)
+        .bind(&params.collected_by)
+        .bind(&params.custodian)
+        .bind(&params.location)
         .bind("Pending")
-        .bind(&tags)
+        .bind(&params.tags)
         .bind(tracking_uuid)
         .bind(now)
         .bind(now)
@@ -84,26 +94,17 @@ impl EvidenceService {
     }
 
     /// Update an evidence item
-    pub async fn update_evidence(
-        &self,
-        id: Uuid,
-        title: Option<String>,
-        description: Option<String>,
-        custodian: Option<String>,
-        location: Option<String>,
-        admissibility: Option<String>,
-        tags: Option<Vec<String>>,
-    ) -> Result<EvidenceItem, AppError> {
+    pub async fn update_evidence(&self, id: Uuid, params: UpdateEvidenceParams) -> Result<EvidenceItem, AppError> {
         let now = Utc::now();
         let existing = self.get_evidence(id).await?;
 
-        let updated_title = title.unwrap_or(existing.title);
-        let updated_description = description.unwrap_or(existing.description);
-        let updated_custodian = custodian.unwrap_or(existing.custodian);
-        let updated_location = location.unwrap_or(existing.location);
-        let updated_tags = tags.unwrap_or(existing.tags);
+        let updated_title = params.title.unwrap_or(existing.title);
+        let updated_description = params.description.unwrap_or(existing.description);
+        let updated_custodian = params.custodian.unwrap_or(existing.custodian);
+        let updated_location = params.location.unwrap_or(existing.location);
+        let updated_tags = params.tags.unwrap_or(existing.tags);
 
-        let item = if let Some(adm) = admissibility {
+        let item = if let Some(adm) = params.admissibility {
             sqlx::query_as::<_, EvidenceItem>(
                 r#"
                 UPDATE evidence_items
