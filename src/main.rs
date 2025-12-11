@@ -16,11 +16,13 @@ use utoipa_swagger_ui::SwaggerUi;
 use rusty_saas::{
     api::{
         cases::{handlers as case_handlers, CaseService},
+        dashboard::{handlers as dashboard_handlers, DashboardService, DashboardStats, ChartData, Alert},
         docket::{handlers as docket_handlers, DocketService},
         documents::{handlers as document_handlers, DocumentService},
         evidence::{handlers as evidence_handlers, EvidenceService},
         health::{health_check, liveness_check, readiness_check},
         motions::{handlers as motion_handlers, MotionService},
+        tasks::{handlers as task_handlers, TaskService},
         users::{handlers as user_handlers, UserService},
     },
     auth::AuthService,
@@ -30,7 +32,7 @@ use rusty_saas::{
     models::{
         Case, CaseResponse, CreateCaseRequest, CreateDocumentRequest, CreateUserRequest,
         DocketEntry, Document, EvidenceItem, HealthResponse, LoginRequest, LoginResponse, Motion,
-        Party, UpdateCaseRequest, UpdateUserRequest, UserResponse,
+        Party, UpdateCaseRequest, UpdateUserRequest, UserResponse, WorkflowTask,
     },
 };
 
@@ -71,6 +73,11 @@ use rusty_saas::{
         motion_handlers::create_motion,
         motion_handlers::update_motion,
         motion_handlers::delete_motion,
+        dashboard_handlers::get_stats,
+        dashboard_handlers::get_chart_data,
+        dashboard_handlers::get_alerts,
+        task_handlers::list_tasks,
+        task_handlers::get_task,
     ),
     components(
         schemas(
@@ -90,6 +97,10 @@ use rusty_saas::{
             DocketEntry,
             EvidenceItem,
             Motion,
+            DashboardStats,
+            ChartData,
+            Alert,
+            WorkflowTask,
         )
     ),
     modifiers(&SecurityAddon),
@@ -102,6 +113,8 @@ use rusty_saas::{
         (name = "docket", description = "Docket entry management endpoints"),
         (name = "evidence", description = "Evidence item management endpoints"),
         (name = "motions", description = "Motion management endpoints"),
+        (name = "dashboard", description = "Dashboard statistics and analytics endpoints"),
+        (name = "tasks", description = "Workflow task management endpoints"),
     )
 )]
 struct ApiDoc;
@@ -167,6 +180,8 @@ async fn main() -> anyhow::Result<()> {
     let docket_service = Arc::new(DocketService::new(db.pool().clone()));
     let evidence_service = Arc::new(EvidenceService::new(db.pool().clone()));
     let motion_service = Arc::new(MotionService::new(db.pool().clone()));
+    let dashboard_service = Arc::new(DashboardService::new(db.pool().clone()));
+    let task_service = Arc::new(TaskService::new(db.pool().clone()));
 
     // Configure CORS based on environment
     let cors = if config.server.environment == "production" {
@@ -302,6 +317,27 @@ async fn main() -> anyhow::Result<()> {
             auth_middleware,
         ));
 
+    // Build dashboard protected routes
+    let dashboard_protected_routes = Router::new()
+        .route("/api/dashboard/stats", get(dashboard_handlers::get_stats))
+        .route("/api/dashboard/chart-data", get(dashboard_handlers::get_chart_data))
+        .route("/api/dashboard/alerts", get(dashboard_handlers::get_alerts))
+        .with_state(dashboard_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
+    // Build task protected routes
+    let task_protected_routes = Router::new()
+        .route("/api/tasks", get(task_handlers::list_tasks))
+        .route("/api/tasks/:id", get(task_handlers::get_task))
+        .with_state(task_service)
+        .route_layer(middleware::from_fn_with_state(
+            auth_service.clone(),
+            auth_middleware,
+        ));
+
     // Combine all routes
     let app = Router::new()
         .merge(public_routes)
@@ -311,6 +347,8 @@ async fn main() -> anyhow::Result<()> {
         .merge(docket_protected_routes)
         .merge(evidence_protected_routes)
         .merge(motion_protected_routes)
+        .merge(dashboard_protected_routes)
+        .merge(task_protected_routes)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(CompressionLayer::new())
         .layer(cors)
